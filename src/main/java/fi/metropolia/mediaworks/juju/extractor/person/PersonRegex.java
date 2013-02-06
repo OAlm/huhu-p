@@ -38,15 +38,12 @@ import com.myml.gexp.chunker.common.typedef.GraphUtils;
 import com.myml.gexp.chunker.common.util.RegExpUtils;
 import com.myml.gexp.graph.matcher.GraphRegExp;
 
-import fi.metropolia.mediaworks.juju.Juju;
-import fi.metropolia.mediaworks.juju.util.StringSim;
-
 public class PersonRegex {
 	private static final Logger log = Logger.getLogger(PersonRegex.class);
 	
-	public static final String MALE_FILE = Juju.class.getResource("/name/male.name").getFile();
-	public static final String FEMALE_FILE = Juju.class.getResource("/name/female.name").getFile();
-	public static final String SURNAME_FILE = Juju.class.getResource("/name/sur.name").getFile();
+	public static final String MALE_FILE = PersonRegex.class.getResource("/name/male.name").getFile();
+	public static final String FEMALE_FILE = PersonRegex.class.getResource("/name/female.name").getFile();
+	public static final String SURNAME_FILE = PersonRegex.class.getResource("/name/sur.name").getFile();
 
 	private static final String MALE_REGEXP;
 	private static final String FEMALE_REGEXP;
