@@ -39,7 +39,8 @@ public class Example {
 		
 		Tika tika = new Tika();
 		String text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/2816/"));
-		text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Winston_Churchill"));
+		text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/523/"));
+//		text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Winston_Churchill"));
 		
 	
 		Huhu p = new Huhu();
@@ -48,12 +49,12 @@ public class Example {
 		
 		LanguageIdentifier l = new LanguageIdentifier(text);
 		
-		if(l.getLanguage().equals("fi")) {
-			//group similar names
+		if(l.getLanguage().equals("fi")) { // special treatment for Finnish only!
+			//group similar names, inflected forms of surnames will combined by string suffix similarity
 			SortedSet<SortedSet<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
 			System.out.println("gr:" +grouped);
 			
-			// normalize surnames (Finnish only! Remove for English)
+			// normalize surnames
 			Multiset<String> normalized = p.normalizeResult(grouped);
 //			System.out.println("Ordered alphabetically: " + normalized);
 			System.out.println("Ordered by frequency: "+ Multisets.copyHighestCountFirst(normalized));
