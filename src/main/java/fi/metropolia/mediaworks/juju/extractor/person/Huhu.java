@@ -49,7 +49,10 @@ import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.TreeMultiset;
 import com.google.common.io.Files;
 import com.myml.gexp.chunker.Chunk;
 import com.myml.gexp.chunker.Chunker;
@@ -76,7 +79,7 @@ public class Huhu {
 	private static final List<String> FEMALE_NAMES;
 	private static final List<String> SURNAMES;
 	
-	private SortedSet<String> result;
+	private Multiset<String> result;
 	
 	static {
 		List<String> male;
@@ -111,7 +114,7 @@ public class Huhu {
 	}
 	
 	public Huhu() {
-		result = new TreeSet<String>(); // result set init
+		result = TreeMultiset.create(); // result set init
 	}
 	
 	private static List<String> capitalize(List<String> input) {
@@ -146,10 +149,10 @@ public class Huhu {
 	 * --> empty result set 
 	 */
 	public void clearResults() {
-		this.result = new TreeSet<String>();
+		this.result = TreeMultiset.create();
 	}
 
-	public SortedSet<String> apply(String text) {
+	public Multiset<String> apply(String text) {
 		Chunker personChunker = createPersonChunker();
 		
 		TextWithChunks twc = new TextWithChunks(text);
@@ -173,14 +176,14 @@ public class Huhu {
 	 */
 	public String applyOne(String text) {
 		try {
-			return this.suffixStripper(this.apply(text).first()); // with name normalizer
+			return this.suffixStripper(this.apply(text).elementSet().iterator().next()); // with name normalizer
 		} catch(NoSuchElementException e) {
 			return null;
 		}
 	}
 	
-	public SortedSet<String> normalizeResult(SortedSet<SortedSet<String>> result) {
-		SortedSet<String> normalized = new TreeSet<String>();
+	public Multiset<String> normalizeResult(SortedSet<SortedSet<String>> result) {
+		Multiset<String> normalized = TreeMultiset.create();
 		
 		for (SortedSet<String> set : result) {
 			String shortest = null;
@@ -192,7 +195,7 @@ public class Huhu {
 			
 			if (shortest != null) {
 				if (shortest.matches(SURNAME_REGEXP)) {
-					normalized.add(shortest);
+					normalized.add(shortest,set.size());
 				} else {
 					String[] parts = shortest.split("\\s");
 					String[] outParts = new String[parts.length];
@@ -203,7 +206,7 @@ public class Huhu {
 							outParts[i] = parts[i];
 						}
 					}
-					normalized.add(StringUtils.join(outParts, " "));
+					normalized.add(StringUtils.join(outParts, " "),set.size());
 				}
 			}
 		}

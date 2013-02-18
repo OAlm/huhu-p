@@ -29,20 +29,38 @@ import java.util.SortedSet;
 
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.language.LanguageIdentifier;
+
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 
 public class Example {
 	public static void main(String[] args) throws MalformedURLException, IOException, TikaException {
 		
 		Tika tika = new Tika();
 		String text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/2816/"));
+		text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Winston_Churchill"));
+		
+	
 		Huhu p = new Huhu();
-		SortedSet<String> results = p.apply(text);
+		Multiset<String> results = p.apply(text);
+//		System.out.println("res:" +results);
 		
-		//group similar names
-		SortedSet<SortedSet<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
+		LanguageIdentifier l = new LanguageIdentifier(text);
 		
-		// normalize surnames (Finnish only!)
-		SortedSet<String> normalized = p.normalizeResult(grouped);
+		if(l.getLanguage().equals("fi")) {
+			//group similar names
+			SortedSet<SortedSet<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
+			System.out.println("gr:" +grouped);
+			
+			// normalize surnames (Finnish only! Remove for English)
+			Multiset<String> normalized = p.normalizeResult(grouped);
+//			System.out.println("Ordered alphabetically: " + normalized);
+			System.out.println("Ordered by frequency: "+ Multisets.copyHighestCountFirst(normalized));
+
+		} else {
+			System.out.println(Multisets.copyHighestCountFirst(results));
+		}
 		
 			
 		
