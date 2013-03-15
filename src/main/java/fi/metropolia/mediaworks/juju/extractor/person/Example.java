@@ -22,9 +22,11 @@
  ******************************************************************************/
 package fi.metropolia.mediaworks.juju.extractor.person;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.SortedSet;
 
 import org.apache.tika.Tika;
@@ -34,36 +36,37 @@ import org.apache.tika.language.LanguageIdentifier;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multisets;
 
+import fi.metropolia.mediaworks.juju.util.Tools;
+
 public class Example {
-	public static void main(String[] args) throws MalformedURLException, IOException, TikaException {
+	public static void main(String[] args) throws Exception {
 		
 		Tika tika = new Tika();
-		String text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/2816/"));
-		text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/523/"));
-//		text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Winston_Churchill"));
+		String text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/3101/"));
 		
-	
 		Huhu p = new Huhu();
-		Multiset<String> results = p.apply(text);
-//		System.out.println("res:" +results);
-		
 		LanguageIdentifier l = new LanguageIdentifier(text);
+		System.out.println("LANG: " + l.getLanguage());
 		
 		if(l.getLanguage().equals("fi")) { // special treatment for Finnish only!
+			Multiset<String> results = p.apply(text, "fi");
+//			System.out.println("HIGHCOUNT: " +Multisets.copyHighestCountFirst(results));
+			
 			//group similar names, inflected forms of surnames will combined by string suffix similarity
-			SortedSet<SortedSet<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
-			System.out.println("gr:" +grouped);
+			ArrayList<Multiset<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
+//			System.out.println("GROUPED RESULTS:" +grouped);
 			
 			// normalize surnames
 			Multiset<String> normalized = p.normalizeResult(grouped);
 //			System.out.println("Ordered alphabetically: " + normalized);
 			System.out.println("Ordered by frequency: "+ Multisets.copyHighestCountFirst(normalized));
-
+			
 		} else {
+			Multiset<String> results = p.apply(text, "en");
 			System.out.println(Multisets.copyHighestCountFirst(results));
 		}
 		
-			
+//		System.out.println("DOCUMENT: "+p.getTaggedDocument());
 		
 	}
 }

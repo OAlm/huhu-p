@@ -47,6 +47,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
+import org.apache.tika.language.LanguageIdentifier;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultiset;
@@ -63,6 +64,8 @@ import com.myml.gexp.chunker.common.typedef.GraphUtils;
 import com.myml.gexp.chunker.common.util.RegExpUtils;
 import com.myml.gexp.graph.matcher.GraphRegExp;
 
+import fi.metropolia.mediaworks.juju.extractor.person.fi.FiLemmatizer;
+
 public class Huhu {
 	private static final Logger log = Logger.getLogger(Huhu.class);
 	
@@ -70,8 +73,8 @@ public class Huhu {
 	public static final String FEMALE_FILE = Huhu.class.getResource("/name/female.name").getFile();
 	public static final String SURNAME_FILE = Huhu.class.getResource("/name/sur.name").getFile();
 
-	private static final String MALE_REGEXP;
-	private static final String FEMALE_REGEXP;
+	public static final String MALE_REGEXP;
+	public static final String FEMALE_REGEXP;
 	private static final String NAME_REGEXP;
 	private static final String SURNAME_REGEXP;
 	
@@ -80,6 +83,8 @@ public class Huhu {
 	private static final List<String> SURNAMES;
 	
 	private Multiset<String> result;
+	
+	private StringBuilder taggedDoc; //store doc with names tagged 
 	
 	static {
 		List<String> male;
@@ -107,7 +112,7 @@ public class Huhu {
 		FEMALE_NAMES = capitalize(female);
 		FEMALE_REGEXP = RegExpUtils.convertListToRegexp(true, FEMALE_NAMES.toArray(new String[0]));
 		
-		NAME_REGEXP = "(" + MALE_REGEXP + ")|(" + FEMALE_REGEXP + ")";
+		NAME_REGEXP = "(" + Huhu.MALE_REGEXP + ")|(" + Huhu.FEMALE_REGEXP + ")";
 		
 		SURNAMES = capitalize(surnames);
 		SURNAME_REGEXP = RegExpUtils.convertListToRegexp(true, SURNAMES.toArray(new String[0]));
@@ -115,6 +120,7 @@ public class Huhu {
 	
 	public Huhu() {
 		result = TreeMultiset.create(); // result set init
+		taggedDoc = new StringBuilder();
 	}
 	
 	private static List<String> capitalize(List<String> input) {
@@ -123,49 +129,46 @@ public class Huhu {
 		}
 		return input;
 	}
-
-	public Chunker createPersonChunker() {
-		GraphRegExp.Matcher token = match("token");
-
-		
-		GraphRegExp.Matcher firstName = GraphUtils.regexp("^(" + MALE_REGEXP + "|" + FEMALE_REGEXP + ")(-(" + MALE_REGEXP + "|" + FEMALE_REGEXP + "))?$", token);
-		GraphRegExp.Matcher mid1 = GraphUtils.regexp("(af|al|mac|von|van|van|d'|D'|af|da|de|the|of|Of|De)", token); // fix case insensitive this row 
-		GraphRegExp.Matcher mid2 = GraphUtils.regexp("(der|den)", token);
-		GraphRegExp.Matcher capitalizedWord = GraphUtils.regexp("^\\p{Lu}'?\\p{L}+(-\\p{Lu}\\p{L}+)?$", token);
-		GraphRegExp.Matcher letter = GraphUtils.regexp("^\\p{Upper}\\.$", token);		
-		
-		Chunker chunker = Chunkers.pipeline(
-				Chunkers.regexp("token", "\\p{L}+-?\\p{L}+|[^\\s]+|\\n|"), // --> TODO: check this token. Person-regex have to first pass token-pattern. Why [^\s]+? and \n 
-				new GraphExpChunker(null, seq( mark("person", or(
-						seq(firstName,  opt(or(firstName,letter)), opt(firstName),opt(mid1), opt(mid2), capitalizedWord)
-				))))
-		);
-		
-
-		return chunker;
-	}
 	
 	/**
 	 * --> empty result set 
+	 * 
 	 */
 	public void clearResults() {
 		this.result = TreeMultiset.create();
 	}
 
-	public Multiset<String> apply(String text) {
-		Chunker personChunker = createPersonChunker();
+	public Multiset<String> apply(String text, String lang) {
+		
+		Chunker personChunker;
+		
+		if(lang.equals("fi")) {
+			personChunker = NameChunker.createFinnishChunker();
+		} else {
+			personChunker = NameChunker.createEnglishChunker();
+		}
 		
 		TextWithChunks twc = new TextWithChunks(text);
 		
 		Collection<Chunk> chunks = personChunker.chunk(twc);
+		int i = 0;
+		int pointer = 0;
 		
 		for (Chunk ch : chunks) {
-//			log.debug("CHUNK: "+ ch.type+": "+text.substring(ch.start,ch.end));
+			String chunk = ch.getContent();
+			log.info("CHUNK "+ i+": "+ ch.type+": "+ch.start+", " +ch.end+": "+chunk);
 			if (ch.type.equals("person")) {
-//				log.debug("CHUNK: "+ ch.type+": "+text.substring(ch.start,ch.end));
-				result.add(ch.getContent());
-			}
+				taggedDoc.append(text.substring(pointer, ch.start)); // prev text
+				taggedDoc.append("<name>"+chunk+"</name>");
+				pointer = ch.end;
+				
+				result.add(chunk);
+				
+			} 
+			i++;
 		}
+		taggedDoc.append(text.substring(pointer));
+				
 		
 		return result;
 	}
@@ -174,18 +177,22 @@ public class Huhu {
 	 * @param text
 	 * @return
 	 */
-	public String applyOne(String text) {
+	public String applyOne(String text, String lang) {
 		try {
-			return this.suffixStripper(this.apply(text).elementSet().iterator().next()); // with name normalizer
+			return FiLemmatizer.apply(this.apply(text, lang).elementSet().iterator().next()); // with name normalizer
 		} catch(NoSuchElementException e) {
 			return null;
 		}
 	}
 	
-	public Multiset<String> normalizeResult(SortedSet<SortedSet<String>> result) {
+	public String getTaggedDocument() {
+		return this.taggedDoc.toString();
+	}
+	
+	public Multiset<String> normalizeResult(ArrayList<Multiset<String>> result) {
 		Multiset<String> normalized = TreeMultiset.create();
 		
-		for (SortedSet<String> set : result) {
+		for (Multiset<String> set : result) {
 			String shortest = null;
 			for (String s : set) {
 				if (shortest == null || s.length() < shortest.length()) {
@@ -200,9 +207,12 @@ public class Huhu {
 					String[] parts = shortest.split("\\s");
 					String[] outParts = new String[parts.length];
 					for (int i = 0; i<parts.length; i++) {
-						if (!parts[i].matches(NAME_REGEXP) && (i == 0 || i == parts.length-1)) {
-							outParts[i] = suffixStripper(parts[i]);
+						log.debug("part "+i+": "+parts[i]);
+						if (i == parts.length-1) {
+//							log.debug("Apply lemmatizer: "+parts[i]);
+							outParts[i] = FiLemmatizer.apply(parts[i]);
 						} else {
+//							log.debug("No lemmatizer "+parts[i]);
 							outParts[i] = parts[i];
 						}
 					}
@@ -212,148 +222,6 @@ public class Huhu {
 		}
 		
 		return normalized;
-	}
-
-	/*
-	 * 
-	 * normalizer for Finnish inflected forms of the surnames, rather ugly solution
-	 * 
-	 * sijamuodot:  1. nominatiivi (alm, almit), 2. akkusatiivi ([he näkivät] almin, almit) , 3. genetiivi (almin, almien), 
-	 * 4. partitiivi (almia, almeja), 5. essiivi (almina, almeina), 6. translatiivi (almiksi, almeiksi), 7. inessiivi (almissa, almeissa), 
-	 * 8. illatiivi (almiin, almeihin), 9. elatiivi (almista, almeista), 10. adessiivi (almilla, almeilla), 11. allatiivi (almille, almeille), 
-	 * 12. ablatiivi (almilta, almeilta), 13. abessiivi (almitta, almeitta), 14. instruktiivi (almin, almein), 
-	 * 15. [paljain jaloin] ja 16. komitatiivi (almeineen). + 17. eksessiivi
-	 * --> huom. taivutusluokan käsite on toinen: tietty luokka käyttäytyy samalla tavalla
-	 * 
-	 * 
-	 * 1. nom	-   , -t
-	 * 2. akk	-in , -it
-	 * 3. gen	-in , -ien
-	 * 4. par	-ia , -eja
-	 * 5. ess   -ina, -eina
-	 * 6. tra	-ksi, -eiksi
-	 * 7. ine	-ssa, -issa
-	 * 8. ill	-iin, -eihin
-	 * 9. ela	-sta, -eista
-	 * 10. ade	-lla, -eilla
-	 * 11. all	-lle, -eille
-	 * 12. abl	-lta, -eilta
-	 * 13. abe 	-tta, -eitta [EI ESIINNY]
-	 * 14. ins	-min, -mein [EI ESIINNY]
-	 * 15. kom  -eineen [EI ESIINNY]
-	 */
-	
-	private String suffixStripper(String s) { //TODO: monikko ei esiinny nimissä?
-		log.debug("parsing '"+s+"'");
-		if (s.matches(".*lt[aä]")) { // 12. ABL
-			log.debug("ABLATIVE");
-			if(s.matches(".*ilt[aä]")) {
-				return s.substring(0, s.length() - 4);
-			}
-			return s.substring(0, s.length() - 3);
-			
-		} else if (s.matches(".*lle")) { // 11. ALL
-			log.debug("ALLATIVE");
-			if(s.matches(".*ille")) {
-				return s.substring(0, s.length() - 4);
-			} else if(s.matches(".*kselle")) {
-				return s.substring(0, s.length() - 6)+"s"; // Paciukselle --> Pacius
-			} else if(s.matches(".*selle")) { // Räsäselle, Järviselle
-				return s.substring(0, s.length() - 5)+"nen";
-			} else {
-				return s.substring(0, s.length() - 3);
-			}
-		} else if (s.matches(".*lla")) { // 10. ADE
-			log.debug("ADESSIVE");
-			if(s.matches(".*illa")) {
-				return s.substring(0, s.length() - 4);
-			} else if(s.matches(".*ghella")) { // garghella
-				return s;
-			} else {
-				return s.substring(0, s.length() - 3);
-			}
-		} else if (s.matches(".*st[aä]")) { // 9. ELA
-			log.debug("ELATIVE");
-			if(s.matches(".*rist[aä]")) {
-				return s.substring(0, s.length() - 3);
-			} else if(s.matches(".*ist[aä]")) {
-				return s.substring(0, s.length() - 4);
-			} 
-			return s.substring(0, s.length() - 3);
-			
-		} else if (s.matches(".*(aa|ii)n")) { // 8 ILL
-			log.debug("ILLATIVE");
-			
-			return s.substring(0, s.length() - 3);
-		} else if (s.matches(".*ss[aä]")) { // 7. INE
-			log.debug("INESSIVE");
-			
-			if(s.matches(".*iss[aä]")) {
-				return s.substring(0, s.length() - 4);
-			}
-			return s.substring(0, s.length() - 3);
-		} else if (s.matches(".*ksi")) { // 6. TRA
-			log.debug("TRANSLATIVE");
-			
-			if(s.matches(".*iksi")) {
-				return s.substring(0, s.length() - 4);
-			}
-			return s.substring(0, s.length() - 3);
-		} else if (s.matches(".*in[aä]")) { // 5. ESS
-			log.debug("ESSIVE");
-			return s.substring(0, s.length() - 3);
-		} else if (s.matches(".*ia")) { // 4. PAR
-			log.debug("PARTITIVE");
-			if (s.matches(".*(ria)")) { // lontoon
-				return s;
-			}
-			return s.substring(0, s.length() - 2);
-		} else if (s.matches(".*ien")) { //3. GEN PL [EI ESIINNY?]
-			log.debug("GENETIVE PLURAL");
-			return s.substring(0, s.length() - 2);
-		} else if (s.matches(".*n")) { //3. GEN SG, 2. AKK SG
-			log.debug("GENETIVE, ACCUSATIVE");
-			
-			if (s.matches(".*(con|oon)")) { // lontoon
-				return s.substring(0, s.length() - 1);
-			} else if (s.matches(".*non")) {
-				return s.substring(0, s.length() - 1);
-			} else if (s.matches(".*nen")) { // manninen
-					return s;
-			} else if (s.matches(".*ian")) {
-				return s.substring(0, s.length() - 1);
-			} else if (s.matches(".*[(nn)(ström)(tt)hlnr]in")) { // Rennerin --> Renner (vrt alla *in --> *i), Arteronin --> Arteron, Scottin, Pavlovitshin
-				return s.substring(0, s.length() - 2);
-			} else if (s.matches(".*laisen")) {
-				return s.substring(0, s.length() - 6) + "lainen";
-			} else if (s.matches(".*ren")) { //wahren --> wahren
-				return s;
-			} else if(s.matches(".*[aeiouö]sen")) { // järvisen, ylösen, kelasen 
-				return s.substring(0, s.length() - 3) + "nen";
-			} else if (s.matches(".*(xon|oln|sen|son|hn|ean|pton|ron|upin|illan|green|stein)")) { //henriksson, henriksen, john, ocean, frampton, cuaron, lupin, mcmillan
-				return s;
-			} else if (s.matches(".*man")) { //snellman --> snellman, ocean
-				return s;
-			} else if (s.matches(".*hden")) { //lehden --> lehti
-				return s.substring(0, s.length()-3)+"ti";
-			} else if(s.matches(".*en")) { //Kiven --> Kivi
-			    return s.substring(0, s.length()-2)+"i";
-			} else if(s.matches(".*(lan|eyn|donan)")) { //Vesalan, Weasleyn, Maradonan
-			    return s.substring(0, s.length()-1);
-			} else if(s.matches(".*[aiäö]n")) {
-				return s.substring(0, s.length() - 1);
-			} else {
-				return s.substring(0, s.length() - 2);
-			}
-		} else {
-			log.debug("--> no match");
-		}
-		
-		/* else if (s.matches(".*t")) { // 2. AKK PL, 1. NOM PL --> ei esiinny?
-			return s.substring(0, s.length() - 2);
-		} */
-
-		return s;
 	}
 
 }
