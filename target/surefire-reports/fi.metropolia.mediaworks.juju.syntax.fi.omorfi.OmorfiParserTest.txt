@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: fi.metropolia.mediaworks.juju.syntax.fi.omorfi.OmorfiParserTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.333 sec
