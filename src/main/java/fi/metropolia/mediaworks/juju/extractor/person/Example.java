@@ -42,7 +42,7 @@ public class Example {
 	public static void main(String[] args) throws Exception {
 		
 		Tika tika = new Tika();
-		String text = tika.parseToString(new URL("http://www.kansallisbiografia.fi/kb/artikkeli/3101/"));
+		String text = tika.parseToString(new File("/home/alm/git/juju/test.txt"));
 		
 		Huhu p = new Huhu();
 		LanguageIdentifier l = new LanguageIdentifier(text);
