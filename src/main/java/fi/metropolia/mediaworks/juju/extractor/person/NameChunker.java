@@ -35,7 +35,7 @@ public class NameChunker {
 				Chunkers.regexp("token", TOKENPATTERN),
 				new GraphExpChunker(null, seq( mark("person", or(
 						seq(firstName,  opt(or(firstName,letter)), opt(firstName),opt(mid1), opt(mid2), capitalizedWord)
-				)))).setDebugString(true)
+				))))//.setDebugString(true)
 		);
 		
 

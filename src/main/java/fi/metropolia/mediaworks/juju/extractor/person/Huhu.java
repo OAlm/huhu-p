@@ -53,6 +53,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Multisets;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.io.Files;
 import com.myml.gexp.chunker.Chunk;
@@ -82,6 +83,7 @@ public class Huhu {
 	private static final List<String> FEMALE_NAMES;
 	private static final List<String> SURNAMES;
 	
+	private Multiset<String> changed; // for debugging, stores normalized names
 	private Multiset<String> result;
 	
 	private StringBuilder taggedDoc; //store doc with names tagged 
@@ -119,6 +121,7 @@ public class Huhu {
 	}
 	
 	public Huhu() {
+		changed = TreeMultiset.create();
 		result = TreeMultiset.create(); // result set init
 		taggedDoc = new StringBuilder();
 	}
@@ -136,6 +139,17 @@ public class Huhu {
 	 */
 	public void clearResults() {
 		this.result = TreeMultiset.create();
+		this.taggedDoc = new StringBuilder();
+	}
+	
+	public Multiset<String> apply(String text) {
+		LanguageIdentifier l = new LanguageIdentifier(text);
+		log.debug("detected language: " + l.getLanguage());
+		return this.apply(text, l.getLanguage());
+	}
+	
+	public Multiset<String> getNames() {
+		return this.result;
 	}
 
 	public Multiset<String> apply(String text, String lang) {
@@ -169,8 +183,11 @@ public class Huhu {
 		}
 		taggedDoc.append(text.substring(pointer));
 				
-		
-		return result;
+		if(lang.equals("fi")) {
+			ArrayList<Multiset<String>> grouped = StringSim.groupSimilarStrings(result, 0.7);
+			return Multisets.copyHighestCountFirst(this.normalizeResult(grouped));
+		}
+		return Multisets.copyHighestCountFirst(result);
 	}
 	/**
 	 * return the first occurence matching, for testing purposes
@@ -211,6 +228,9 @@ public class Huhu {
 						if (i == parts.length-1) {
 //							log.debug("Apply lemmatizer: "+parts[i]);
 							outParts[i] = FiLemmatizer.apply(parts[i]);
+							if(!parts[i].equals(outParts[i])) { // debugging
+								changed.add(outParts[i]+" ("+parts[i]+")");
+							}
 						} else {
 //							log.debug("No lemmatizer "+parts[i]);
 							outParts[i] = parts[i];
@@ -222,6 +242,11 @@ public class Huhu {
 		}
 		
 		return normalized;
+	}
+
+	public Multiset<String> getChanged() {
+		// TODO Auto-generated method stub
+		return changed;
 	}
 
 }

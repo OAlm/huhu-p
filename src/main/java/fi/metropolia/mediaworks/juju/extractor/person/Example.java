@@ -21,7 +21,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  ******************************************************************************/
 package fi.metropolia.mediaworks.juju.extractor.person;
-
+	
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -42,29 +42,10 @@ public class Example {
 	public static void main(String[] args) throws Exception {
 		
 		Tika tika = new Tika();
-		String text = tika.parseToString(new File("/home/alm/git/juju/test.txt"));
+		String text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Jack_the_Ripper"));
 		
 		Huhu p = new Huhu();
-		LanguageIdentifier l = new LanguageIdentifier(text);
-		System.out.println("LANG: " + l.getLanguage());
-		
-		if(l.getLanguage().equals("fi")) { // special treatment for Finnish only!
-			Multiset<String> results = p.apply(text, "fi");
-//			System.out.println("HIGHCOUNT: " +Multisets.copyHighestCountFirst(results));
-			
-			//group similar names, inflected forms of surnames will combined by string suffix similarity
-			ArrayList<Multiset<String>> grouped = StringSim.groupSimilarStrings(results, 0.7);
-//			System.out.println("GROUPED RESULTS:" +grouped);
-			
-			// normalize surnames
-			Multiset<String> normalized = p.normalizeResult(grouped);
-//			System.out.println("Ordered alphabetically: " + normalized);
-			System.out.println("Ordered by frequency: "+ Multisets.copyHighestCountFirst(normalized));
-			
-		} else {
-			Multiset<String> results = p.apply(text, "en");
-			System.out.println(Multisets.copyHighestCountFirst(results));
-		}
+		System.out.println(p.apply(text));
 		
 //		System.out.println("DOCUMENT: "+p.getTaggedDocument());
 		
