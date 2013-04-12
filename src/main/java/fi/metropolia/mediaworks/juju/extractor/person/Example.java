@@ -22,27 +22,15 @@
  ******************************************************************************/
 package fi.metropolia.mediaworks.juju.extractor.person;
 	
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.SortedSet;
 
 import org.apache.tika.Tika;
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.language.LanguageIdentifier;
-
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multisets;
-
-import fi.metropolia.mediaworks.juju.util.Tools;
 
 public class Example {
 	public static void main(String[] args) throws Exception {
 		
 		Tika tika = new Tika();
-		String text = tika.parseToString(new URL("http://en.wikipedia.org/wiki/Jack_the_Ripper"));
+		String text = tika.parseToString(new URL("http://www.hs.fi"));
 		
 		Huhu p = new Huhu();
 		System.out.println(p.apply(text));

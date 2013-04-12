@@ -25,11 +25,6 @@ package fi.metropolia.mediaworks.juju.extractor.person.fi;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import fi.metropolia.mediaworks.juju.document.Document;
-import fi.metropolia.mediaworks.juju.document.Sentence;
-import fi.metropolia.mediaworks.juju.document.Token;
-import fi.metropolia.mediaworks.juju.syntax.parser.DocumentBuilder;
-
 public class FiLemmatizer {
 	private static final Logger log = Logger.getLogger(FiLemmatizer.class);
 	//TODO: checkcheck, now only positive rules, 
@@ -86,6 +81,12 @@ public class FiLemmatizer {
 				changed = s;
 			} else if(s.matches(".*ilt[aä]")) {
 				changed = s.substring(0, s.length() - 4);
+			} else if (s.matches(".*eelta")){
+				log.debug("KOTUS48");
+				changed =  s.substring(0, s.length() - 4);	
+			} else if (s.matches(".*selta")){
+				log.debug("KOTUS38");
+				changed =  s.substring(0, s.length() - 5)+"nen";	
 			} else {
 				changed =  s.substring(0, s.length() - 3);	
 			}
@@ -176,7 +177,7 @@ public class FiLemmatizer {
 		} else if (s.matches(".*n")) { //3. GEN SG, 2. AKK SG
 			log.debug("GENETIVE, ACCUSATIVE");
 			
-			if (s.matches("(?i)(in|on|.*(acon|ean|ir[eé]n|akin|chien|cton|elin|enin|gren|green|hagen|hdan|hen|hn|hren|illan|iksen|keon|llen|lsen|man|mén|mon|nn|nsen|nton|ohan|oln|oligan|olin|pton|rdin|ron|rn|upin|tren|t(s|š)k?[iy]n|son|stein|vén|xon))")) { //false positives: henriksson, henriksen, john, ocean, frampton, cuaron, lupin, mcmillan
+			if (s.matches("(?i)(in|on|.*(acon|ean|ir[eé]n|akin|chien|cton|elin|enin|gren|green|hagen|hdan|hen|hn|hren|illan|iksen|keon|llen|lsen|mén|mon|nn|nsen|nton|ohan|oln|oligan|olin|pton|rdin|ron|rn|upin|tren|t(s|š)k?[iy]n|son|stein|vén|xon))")) { //false positives: henriksson, henriksen, john, ocean, frampton, cuaron, lupin, mcmillan
 				log.debug("FALSE POS");
 				changed =  s;
 			} else if (s.matches(".*(ien|Leen)")) { // Leen
@@ -307,16 +308,5 @@ public class FiLemmatizer {
 			return s;
 		}
 	}
-	public static void main(String[] args) {
-		log.setLevel(Level.DEBUG);
-		String text = "mullen";
-		Document d = DocumentBuilder.parseDocument(text);
-		for(Sentence s: d) {
-			for(Token t: s) {
-				System.out.println("RESULT: " + FiLemmatizer.apply(t.getText()));				
-			}
-		}
-		
-	}
-	
+
 }
