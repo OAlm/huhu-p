@@ -172,14 +172,39 @@ public class FiLemmatizer {
 				changed = s.substring(0, s.length() - 4);
 			} else {
 				changed =  s.substring(0, s.length() - 3);
-			}
-			
-		} else if (s.matches(".*n")) { //3. GEN SG, 2. AKK SG
+			} 
+		} else if (s.matches(".*([gshl(ks)](aa|ee|ii|oo)n|ihin)")) { // 8 ILL
+				log.debug("ILLATIVE");
+				if(s.matches(".*ihin")) { // karzaihin 
+					log.debug("KOTUS18");
+					changed =  s.substring(0, s.length() - 3);
+				} else if(s.matches(".*ks(aa|ee|ii|oo)n")) { 
+					changed =  s.substring(0, s.length() - 5)+"s";
+				} else if(s.matches(".*l(aa|ee|ii|oo)n")) { 
+					changed =  s.substring(0, s.length() - 2);
+				} else if(s.matches(".*(geen)")) { // assangeen
+					log.debug("KOTUS8");
+					changed =  s.substring(0, s.length() - 2);
+				} else if(s.matches(".*heen")) {
+					changed =  s.substring(0, s.length() - 2);
+				} else if(s.matches(".*seen")) { // hameeseen
+					log.debug("KOTUS 48");
+					changed =  s.substring(0, s.length() - 5);
+				} else if(s.matches(".*saan")) { // viisaan
+					log.debug("KOTUS 41");
+					changed =  s.substring(0, s.length() - 2)+"s";
+				} else {
+					changed =  s.substring(0, s.length() - 3);
+				}
+			} else if (s.matches(".*n")) { //3. GEN SG, 2. AKK SG
 			log.debug("GENETIVE, ACCUSATIVE");
 			
-			if (s.matches("(?i)(in|on|.*(acon|ean|ir[eé]n|akin|chien|cton|elin|enin|gren|green|hagen|hdan|hen|hn|hren|illan|iksen|keon|llen|lsen|mén|mon|nn|nsen|nton|ohan|oln|oligan|olin|pton|rdin|ron|rn|upin|tren|t(s|š)k?[iy]n|son|stein|vén|xon))")) { //false positives: henriksson, henriksen, john, ocean, frampton, cuaron, lupin, mcmillan
+			if (s.matches("(?i)(in|on|.*(acon|ean|ir[eé]n|akin|chien|cton|elin|enin|gren|green|hagen|hdan|hen|hn|hren|illan|iksen|keon|llen|lsen|mén|mon|nn|nsen|nton|ohan|oln|oligan|olin|pton|rdin|ron|rn|upin|tman|tren|t(s|š)k?[iy]n|son|stein|vén|xon))")) { //false positives: henriksson, henriksen, john, ocean, frampton, cuaron, lupin, mcmillan
 				log.debug("FALSE POS");
 				changed =  s;
+			} else if (s.matches(".*(den)")) { // Vuoden, Suden
+				log.debug("KOTUS27");
+				changed =  s.substring(0, s.length() - 3)+"si";
 			} else if (s.matches(".*(ien|Leen)")) { // Leen
 				log.debug("KOTUS18");
 				changed =  s.substring(0, s.length() - 1);
@@ -189,7 +214,7 @@ public class FiLemmatizer {
 			} else if (s.matches(".*äen")) { // mäen
 				log.debug("KOTUS7 - AV5");
 				changed =  s.substring(0, s.length() - 2)+"ki";
-			} else if (s.matches(".*(k|m)en")) { // niemen, kosken
+			} else if (s.matches(".*(sk|em)en")) { // niemen, kosken
 					log.debug("KOTUS7");
 					changed =  s.substring(0, s.length() - 2)+"i";
 			} else if (s.matches(".*(con|oon)")) { // lontoon
@@ -209,7 +234,6 @@ public class FiLemmatizer {
 				} else {
 					changed = s;
 				}
-				
 			} else if (s.matches(".*(hon|lon|mpon|non|panin|ton)")) { // salon, tapanin (ei brygmanin
 				log.debug("KOTUS1");
 				changed =  s.substring(0, s.length() - 1);
@@ -222,9 +246,11 @@ public class FiLemmatizer {
 			} else if (s.matches(".*issen")) {
 					log.debug("KOTUS21 / Malissen");
 					changed =  s.substring(0, s.length() - 1);
-			} else if (s.matches(".*atan")) {
-					log.debug("KOTUS 9 / AV1: Liimatan");
-					changed =  s.substring(0, s.length() - 2)+"ta";
+			} else if (s.matches(".*(atan|opan)")) {
+					log.debug("KOTUS9 / AV1: Liimatan");
+					
+					char doubling = s.charAt(s.length()-3);
+					changed =  s.substring(0, s.length() - 2)+doubling+"a";
 			} else if(s.matches(".*ingin")) { // helsingin
 				log.debug("KOTUS5 AV1 ");
 				changed =  s.substring(0, s.length() - 3)+"ki";
@@ -247,7 +273,7 @@ public class FiLemmatizer {
 			} else if (s.matches(".*ksen")) { //serlachiuksen
 				log.debug("KOTUS39");
 				changed =  s.substring(0, s.length() - 4) + "s";
-			} else if (s.matches(".*usen")) { //krausen
+			} else if (s.matches(".*(den|dken|usen)")) { //krausen
 				log.debug("KOTUS8");
 				changed =  s.substring(0, s.length() - 1);
 			} else if(s.matches(".*[aeiouö]sen")) { // järvisen, ylösen, kelasen
@@ -266,27 +292,7 @@ public class FiLemmatizer {
 				log.debug("--> default");
 				changed =  s.substring(0, s.length() - 2);
 			}
-		} else if (s.matches(".*[gshl(ks)](aa|ee|ii|oo)n")) { // 8 ILL
-			log.debug("ILLATIVE");
-		    if(s.matches(".*ks(aa|ee|ii|oo)n")) { 
-				changed =  s.substring(0, s.length() - 5)+"s";
-			} else if(s.matches(".*l(aa|ee|ii|oo)n")) { 
-				changed =  s.substring(0, s.length() - 2);
-			} else if(s.matches(".*(geen)")) { // assangeen
-				log.debug("KOTUS8");
-				changed =  s.substring(0, s.length() - 2);
-			} else if(s.matches(".*heen")) {
-				changed =  s.substring(0, s.length() - 2);
-			} else if(s.matches(".*seen")) { // hameeseen
-				log.debug("KOTUS 48");
-				changed =  s.substring(0, s.length() - 5);
-			} else if(s.matches(".*saan")) { // viisaan
-				log.debug("KOTUS 41");
-				changed =  s.substring(0, s.length() - 2)+"s";
-			} else {
-				changed =  s.substring(0, s.length() - 3);
-			}
-		} else if (s.matches(".*ien")) { //3. GEN PL [EI ESIINNY?]
+		}  else if (s.matches(".*ien")) { //3. GEN PL [EI ESIINNY?]
 				log.debug("GENETIVE PLURAL");
 				if (s.matches(".*(gien)")) { // gien
 					changed =  s.substring(0, s.length() - 3);
